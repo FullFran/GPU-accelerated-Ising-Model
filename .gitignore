@@ -1,1 +1,14 @@
 /Fully-Connected-Ising.ipynb
+
+# Simulation output — regenerate it, do not commit it.
+results/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
