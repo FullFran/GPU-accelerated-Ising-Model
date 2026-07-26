@@ -1,0 +1,6 @@
+# The 2024 notebooks are kept for comparison, not as part of the codebase.
+# Without this, their committed HTML exports outweigh the source and GitHub
+# reports the whole repository as an HTML project.
+legacy/** linguist-vendored
+legacy/outputs/** linguist-generated
+*.ipynb linguist-documentation

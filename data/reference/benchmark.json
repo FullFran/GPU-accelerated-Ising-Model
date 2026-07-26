@@ -1,0 +1,51 @@
+{
+  "environment": {
+    "gpu": "Tesla P100-PCIE-16GB",
+    "cupy": "14.0.1",
+    "total_memory_gb": 15.89
+  },
+  "runs": [
+    {
+      "backend": "numpy",
+      "size": 10,
+      "sites": 1000,
+      "seconds": 3.634,
+      "spin_updates_per_second": 22012144.799721967
+    },
+    {
+      "backend": "numpy",
+      "size": 20,
+      "sites": 8000,
+      "seconds": 23.044,
+      "spin_updates_per_second": 27773517.206926115
+    },
+    {
+      "backend": "cupy",
+      "size": 10,
+      "sites": 1000,
+      "seconds": 5.474,
+      "spin_updates_per_second": 14615472.042327667
+    },
+    {
+      "backend": "cupy",
+      "size": 20,
+      "sites": 8000,
+      "seconds": 3.255,
+      "spin_updates_per_second": 196605364.40851712
+    },
+    {
+      "backend": "cupy",
+      "size": 40,
+      "sites": 64000,
+      "seconds": 5.184,
+      "spin_updates_per_second": 987698954.9205203
+    },
+    {
+      "backend": "cupy",
+      "size": 80,
+      "sites": 512000,
+      "seconds": 37.536,
+      "spin_updates_per_second": 1091205611.822468
+    }
+  ]
+}
