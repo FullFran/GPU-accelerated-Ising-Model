@@ -223,6 +223,56 @@ with NumPy, CuPy is wrong.
 
 ---
 
+## Results
+
+Measured on a **Tesla P100-PCIE-16GB** (Kaggle), CuPy 14.0.1. Every run is a
+3D sweep over 40 temperatures held as parallel replicas, 2000 sweeps with 1000
+discarded. Raw output is committed in [`data/reference/`](data/reference/).
+
+### Physics
+
+`T_c = 4.5115` for the 3D cubic lattice. The temperature grid spacing is
+0.139, so every peak below lands within one grid step of the reference value.
+
+| run | χ peak | vs T_c | ⟨\|m\|⟩ at T=1.8 | E/site at T=1.8 | ⟨\|m\|⟩ at T=7.2 |
+|---|---|---|---|---|---|
+| L=20 NumPy | 4.442 | −1.5% | 0.9973 | −2.9839 | 0.0176 |
+| L=20 CuPy | 4.581 | +1.5% | 0.9972 | −2.9834 | 0.0162 |
+| L=40 CuPy | 4.581 | +1.5% | 0.9973 | −2.9837 | 0.0060 |
+| L=80 CuPy | 4.581 | +1.5% | 0.9972 | −2.9835 | 0.0021 |
+
+Three independent consistency checks pass at once: the ground-state energy is
+−3 and every run reports −2.984 alongside ⟨|m|⟩ = 0.997 (no domain artefact);
+the disordered-phase magnetisation falls as 1/√N across L = 20 → 40 → 80
+(ratios 2.7 and 2.9 against the predicted 2.83); and CuPy agrees with the
+NumPy oracle to within 0.05 in ⟨|m|⟩, the residual being genuine critical
+fluctuation between two different RNG streams.
+
+### Throughput
+
+| backend | L | sites | seconds | spin updates/s |
+|---|---|---|---|---|
+| NumPy | 10 | 1,000 | 3.63 | 2.20·10⁷ |
+| NumPy | 20 | 8,000 | 23.04 | 2.78·10⁷ |
+| CuPy | 10 | 1,000 | 5.47 | 1.46·10⁷ |
+| CuPy | 20 | 8,000 | 3.25 | 1.97·10⁸ |
+| CuPy | 40 | 64,000 | 5.18 | 9.88·10⁸ |
+| CuPy | 80 | 512,000 | 37.54 | 1.09·10⁹ |
+
+**At L=10 the GPU is slower than the CPU** (0.7×). A 1000-site lattice cannot
+fill a P100, so kernel-launch overhead dominates and the device spends its time
+waiting. The crossover arrives at L=20 (7.1×), and throughput then saturates
+near 1.1·10⁹ spin updates per second.
+
+That first row is the honest one, and it is why the benchmark starts small: a
+speedup quoted without the size at which it disappears is marketing.
+
+Timings include an explicit `deviceSynchronize()` before the clock stops.
+Without it the measurement records how fast Python enqueues kernels rather than
+how fast they execute — a reliable way to report a speedup that is not there.
+
+---
+
 ## License
 
 MIT
