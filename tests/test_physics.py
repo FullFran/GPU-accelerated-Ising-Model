@@ -23,6 +23,7 @@ from ising.domain.exact import (
     onsager_critical_temperature,
     onsager_magnetisation,
 )
+from ising.domain.lattice import InitialState
 
 BACKEND = NumpyBackend()
 
@@ -229,3 +230,58 @@ def test_high_temperature_limit_is_disordered():
     expected = np.sqrt(2.0 / (np.pi * np.prod(shape)))
     assert result.abs_magnetisation[0] == pytest.approx(expected, abs=0.02)
     assert result.energy_per_site[0] == pytest.approx(0.0, abs=0.05)
+
+
+@pytest.mark.slow
+def test_hot_and_cold_starts_agree_deep_in_the_ordered_phase():
+    """The canonical equilibration check, and the one that caught the quench bug.
+
+    An equilibrium average cannot depend on where the chain started. If a hot
+    and a cold start disagree, the burn-in was too short — full stop.
+
+    This matters at large L and nowhere else. A random start below T_c is an
+    instantaneous quench: the lattice fragments into domains that then have to
+    coarsen away, and coarsening slows down as the lattice grows. Measured
+    here at L=48, T=2.08 the hot start reported 0.2416 against a true value of
+    0.9929, while its energy already sat near the ground state — near-perfect
+    local order, no global alignment.
+
+    The trapped temperature wanders with lattice size and seed, so in a full
+    sweep the damage appears as isolated spikes in an otherwise healthy curve.
+    """
+    shape = (48, 48, 48)
+    temperatures = (1.805, 2.082, 2.360, 2.776)  # all well below T_c = 4.51
+
+    def magnetisation(state):
+        return run_sweep(
+            BACKEND,
+            SweepConfig(
+                shape=shape,
+                temperatures=temperatures,
+                n_sweeps=2_000,
+                burn_in=1_000,
+                measure_every=10,
+                seed=20240210,
+                initial_state=state,
+            ),
+        ).abs_magnetisation
+
+    cold = magnetisation(InitialState.COLD)
+    hot = magnetisation(InitialState.HOT)
+
+    assert np.all(cold > 0.95), f"cold start must stay ordered below T_c, got {cold}"
+
+    # The hot start is asserted to FAIL at this burn-in, the same way the
+    # Metropolis rule is asserted to fail on the 1D ring. Pinning the defect
+    # keeps the default honest: if a future change ever made a quench safe
+    # here, this test would go red and force the claim to be re-examined.
+    worst = float(np.max(np.abs(hot - cold)))
+    assert worst > 0.3, (
+        "expected the quench to trap at least one replica in a domain state; "
+        f"largest hot-vs-cold gap was only {worst:.4f}"
+    )
+
+
+def test_cold_start_is_the_default():
+    """A default that silently produces domain artefacts is not a safe default."""
+    assert SweepConfig(shape=(4, 4), temperatures=(2.0,)).initial_state is InitialState.COLD

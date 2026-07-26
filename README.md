@@ -20,10 +20,10 @@ I wrote the first version of this in February 2024, during my master's in
 physics. It was four Jupyter notebooks, no tests, and the plots looked right.
 
 I rebuilt it in 2026 with the architecture I use for production systems. The
-rebuild was not cosmetic — **writing the tests surfaced four real physics bugs
-that the notebooks had been hiding behind plausible-looking curves.** One of
-them was not in the old code at all: it was in the rewrite, and only the exact
-state sum caught it.
+rebuild was not cosmetic — **writing the tests surfaced five real physics bugs
+that the notebooks had been hiding behind plausible-looking curves.** Two of
+them were not in the old code at all — I introduced them in the rewrite, and
+only the exact state sum and a GPU run that refused to add up caught them.
 
 The 2024 version is preserved untouched in [`legacy/`](legacy/). It is worth
 comparing.
@@ -84,6 +84,37 @@ remains available via `--rule metropolis`, and
 **The lesson is the transferable part**: detailed balance is not enough.
 Invariance of the target distribution says nothing about whether the chain can
 reach all of it, and a non-ergodic sampler fails silently and plausibly.
+
+**5. A random start is a quench, and it traps large lattices in domains.**
+Found by running the real benchmark on a P100 and refusing to accept the plot.
+
+Seeding the lattice randomly is an instantaneous quench from infinite
+temperature. Below T_c the system does not settle into one of the two ordered
+states — it fragments into domains, and the walls then have to coarsen away.
+Coarsening is slow, and it slows further as the lattice grows.
+
+Measured on this engine, deep in the ordered phase where the true value is
+0.997:
+
+| | T | hot start | cold start |
+|---|---|---|---|
+| L=48 | 2.08 | **0.2416** | 0.9929 |
+| L=80 | 1.80 | **0.5529** | 0.9972 |
+
+The tell is a contradiction between two observables: energy already at 98% of
+the ground state — near-perfect *local* order — while magnetisation sits at
+0.55, because the lattice is split into domains of opposite sign that cancel.
+
+The trapped temperature moves around with lattice size and seed, so across a
+full sweep the damage appears as **isolated spikes in an otherwise healthy
+curve**. The first pass looked fine at a glance; it drove the apparent T_c off
+by up to 60% and made the two backends disagree by the entire range of ⟨|m|⟩.
+
+Cold starts are now the default. Above T_c an ordered start disorders in a
+handful of sweeps, so nothing is lost.
+
+**The transferable lesson**: when two observables imply different physics,
+believe the contradiction, not the prettier plot.
 
 ### And one performance bug
 
@@ -178,6 +209,7 @@ with NumPy, CuPy is wrong.
 |---|---|
 | Energy and ⟨\|m\|⟩ on 8-site and 4×4 lattices | Brute-force sum over all 2^N states |
 | Metropolis fails where heat-bath succeeds | Brute-force sum (ergodicity) |
+| Hot and cold starts must agree | Equilibration (start-independence) |
 | Odd lattices are rejected | Bipartiteness of the periodic lattice |
 | 1D chain energy per site | Exact finite-size solution |
 | 1D has no phase transition | Textbook result |

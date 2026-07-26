@@ -16,12 +16,45 @@ but 40 of them evolving simultaneously is not.
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import Any
 
 SPIN_DTYPE = "int8"
 """Spins are +/-1, so int8 is sufficient and keeps four times more lattice in
 memory than float32. Neighbour sums reach at most 2*ndim (6 in 3D), which still
 fits comfortably in int8."""
+
+
+class InitialState(str, Enum):
+    """How the lattice is seeded before the burn-in.
+
+    ``COLD`` is the default, and on large lattices the choice decides whether
+    the results are physics or an artefact.
+
+    A random start is an instantaneous quench from infinite temperature. Below
+    T_c the system does not relax smoothly into one of the two ordered states —
+    it fragments into domains, and the domain walls then have to coarsen away.
+    That coarsening is slow, and it gets slower as the lattice grows: on a 80^3
+    lattice a thousand burn-in sweeps leave the system frozen in a multi-domain
+    configuration whose energy is already near the ground state while its
+    magnetisation is nowhere near saturation.
+
+    Measured on this engine, deep in the ordered phase where the true value is
+    0.997:
+
+        L=48, T=2.08   hot start -> 0.2416     cold start -> 0.9929
+        L=80, T=1.80   hot start -> 0.5529     cold start -> 0.9972
+
+    The trapped temperature moves around with the lattice size and the seed,
+    so the damage shows up as isolated spikes scattered through an otherwise
+    healthy curve — which is exactly how it evades a glance at the plot.
+
+    Starting cold sidesteps the quench entirely. Above T_c an ordered start
+    disorders within a handful of sweeps, so nothing is lost there.
+    """
+
+    COLD = "cold"
+    HOT = "hot"
 
 
 def spatial_axes(shape: tuple[int, ...]) -> tuple[int, ...]:
@@ -40,6 +73,19 @@ def aligned_spins(backend: Any, n_replicas: int, shape: tuple[int, ...], value: 
     """A cold start: every spin identical. Used heavily in tests."""
     xp = backend.xp
     return xp.full((n_replicas, *shape), value, dtype=SPIN_DTYPE)
+
+
+def initial_spins(
+    backend: Any,
+    generator: Any,
+    n_replicas: int,
+    shape: tuple[int, ...],
+    state: InitialState,
+) -> Any:
+    """Seed the lattice according to ``state``. See ``InitialState``."""
+    if state is InitialState.COLD:
+        return aligned_spins(backend, n_replicas, shape)
+    return random_spins(backend, generator, n_replicas, shape)
 
 
 def neighbour_sum(backend: Any, spins: Any, shape: tuple[int, ...]) -> Any:

@@ -16,7 +16,7 @@ import numpy as np
 
 from ..domain import observables as obs
 from ..domain.dynamics import AcceptanceRule, build_masks, reshape_for_broadcast, sweep
-from ..domain.lattice import random_spins
+from ..domain.lattice import InitialState, initial_spins
 
 
 @dataclass(frozen=True)
@@ -29,6 +29,7 @@ class SweepConfig:
     coupling: float = 1.0
     seed: int | None = 20240210  # the date of the original commit
     rule: AcceptanceRule = AcceptanceRule.HEAT_BATH
+    initial_state: InitialState = InitialState.COLD
 
     def __post_init__(self) -> None:
         if self.burn_in >= self.n_sweeps:
@@ -66,7 +67,7 @@ def run_sweep(backend: Any, config: SweepConfig) -> SweepResult:
     beta_bcast = reshape_for_broadcast(backend, beta, ndim)
 
     generator = backend.rng(config.seed)
-    spins = random_spins(backend, generator, len(temperatures), shape)
+    spins = initial_spins(backend, generator, len(temperatures), shape, config.initial_state)
     masks = build_masks(backend, shape)
 
     # Accumulate on the device. The 2024 version appended a fresh observable

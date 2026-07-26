@@ -1,5 +1,5 @@
 {
-  "id": "fullfran/ising-gpu-benchmark",
+  "id": "fran17/ising-gpu-benchmark",
   "title": "Ising GPU Benchmark",
   "code_file": "run.py",
   "language": "python",

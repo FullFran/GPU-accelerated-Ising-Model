@@ -23,6 +23,7 @@ from ising.adapters import get_backend  # noqa: E402
 from ising.application.sweep import SweepConfig, run_sweep  # noqa: E402
 from ising.domain.dynamics import AcceptanceRule  # noqa: E402
 from ising.domain.exact import TC_3D, onsager_critical_temperature  # noqa: E402
+from ising.domain.lattice import InitialState  # noqa: E402
 from ising.infra.writers import write_csv, write_manifest  # noqa: E402
 
 KAGGLE_OUTPUT = Path("/kaggle/working")
@@ -56,6 +57,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         choices=[rule.value for rule in AcceptanceRule],
         help="acceptance rule; metropolis is not ergodic under a checkerboard update",
     )
+    parser.add_argument(
+        "--initial-state",
+        default=InitialState.COLD.value,
+        choices=[state.value for state in InitialState],
+        help="hot starts quench into domains below T_c on large lattices",
+    )
     parser.add_argument("--seed", type=int, default=20240210)
     parser.add_argument("--output-dir", type=Path, default=None)
     parser.add_argument("--tag", default=None, help="suffix for the output filenames")
@@ -87,6 +94,7 @@ def main(argv: list[str] | None = None) -> int:
         measure_every=args.measure_every,
         seed=args.seed,
         rule=AcceptanceRule(args.rule),
+        initial_state=InitialState(args.initial_state),
     )
 
     tag = args.tag or f"{args.dim}d-L{args.size}-{backend.name}"

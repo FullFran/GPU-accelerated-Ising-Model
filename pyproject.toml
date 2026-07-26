@@ -25,6 +25,7 @@ build-backend = "hatchling.build"
 packages = ["src/ising"]
 
 [tool.pytest.ini_options]
+markers = ["slow: long-running equilibration checks"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "-q"
