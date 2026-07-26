@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 REPO = "https://github.com/FullFran/GPU-accelerated-Ising-Model.git"
-BRANCH = "remake/cupy-engine"
+BRANCH = "main"
 OUTPUT = Path("/kaggle/working")
 
 
